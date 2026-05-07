@@ -1,0 +1,221 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-05-06 20:23:01.072651",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_bwun",
+  "amended_from",
+  "naming_series",
+  "show",
+  "movie_title",
+  "theatre",
+  "screen",
+  "show_date",
+  "start_time",
+  "customer_name",
+  "customer_email",
+  "customer_phone",
+  "booked_by",
+  "seats",
+  "number_of_seats",
+  "price_per_seat",
+  "total_amount",
+  "payment_status",
+  "booking_status",
+  "booking_time",
+  "cancellation_time",
+  "refund_amount",
+  "cancellation_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_bwun",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Ticket Booking",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Naming Series",
+   "options": "BKG-.YYYY.-.#####",
+   "reqd": 1
+  },
+  {
+   "fieldname": "show",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Show",
+   "options": "Show",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "show.movie_title",
+   "fieldname": "movie_title",
+   "fieldtype": "Data",
+   "label": "Movie Title",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "show.theatre",
+   "fieldname": "theatre",
+   "fieldtype": "Data",
+   "label": "Theatre",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "show.screen",
+   "fieldname": "screen",
+   "fieldtype": "Data",
+   "label": "Screen",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "show.show_date",
+   "fieldname": "show_date",
+   "fieldtype": "Date",
+   "label": "Show Date",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "show.start_time",
+   "fieldname": "start_time",
+   "fieldtype": "Time",
+   "label": "Start Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_phone",
+   "fieldtype": "Data",
+   "label": "Customer Phone",
+   "reqd": 1
+  },
+  {
+   "default": "__user",
+   "fieldname": "booked_by",
+   "fieldtype": "Link",
+   "label": "Booked By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "number_of_seats",
+   "fieldtype": "Int",
+   "label": "Number Of Seats",
+   "read_only": 1
+  },
+  {
+   "fieldname": "seats",
+   "fieldtype": "Table",
+   "label": "Seats",
+   "options": "Booked Seat"
+  },
+  {
+   "fetch_from": "show.ticket_price",
+   "fieldname": "price_per_seat",
+   "fieldtype": "Currency",
+   "label": "Price Per Seat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount",
+   "read_only": 1
+  },
+  {
+   "default": "Unpaid",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment Status",
+   "options": "Unpaid\nPaid\nRefunded"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "booking_status",
+   "fieldtype": "Select",
+   "label": "Booking Status",
+   "options": "Pending\nConfirmed\nCancelled\nExpired"
+  },
+  {
+   "default": "Now",
+   "fieldname": "booking_time",
+   "fieldtype": "Datetime",
+   "label": "Booking Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancellation_time",
+   "fieldtype": "Datetime",
+   "label": "Cancellation Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_amount",
+   "fieldtype": "Currency",
+   "label": "Refund Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancellation_reason",
+   "fieldtype": "Small Text",
+   "label": "Cancellation Reason"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-06 20:38:18.387643",
+ "modified_by": "Administrator",
+ "module": "Movie Tickets",
+ "name": "Ticket Booking",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

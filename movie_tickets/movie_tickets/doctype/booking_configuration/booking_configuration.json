@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-06 20:41:43.394210",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "max_seats_per_booking",
+  "booking_expiry_minutes",
+  "full_refund_hours",
+  "partial_refund_hours",
+  "partial_refund_pct",
+  "enable_auto_expiry",
+  "booking_open_days_before"
+ ],
+ "fields": [
+  {
+   "default": "10",
+   "fieldname": "max_seats_per_booking",
+   "fieldtype": "Int",
+   "label": "Max Seats Per Booking"
+  },
+  {
+   "default": "15",
+   "fieldname": "booking_expiry_minutes",
+   "fieldtype": "Int",
+   "label": "Booking Expiry Minutes"
+  },
+  {
+   "default": "4",
+   "fieldname": "full_refund_hours",
+   "fieldtype": "Float",
+   "label": "Full Refund Hours"
+  },
+  {
+   "default": "2",
+   "fieldname": "partial_refund_hours",
+   "fieldtype": "Float",
+   "label": "Partial Refund Hours"
+  },
+  {
+   "default": "50",
+   "fieldname": "partial_refund_pct",
+   "fieldtype": "Float",
+   "label": "Partial Refund Pct"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_auto_expiry",
+   "fieldtype": "Check",
+   "label": "Enable Auto Expiry"
+  },
+  {
+   "default": "7",
+   "fieldname": "booking_open_days_before",
+   "fieldtype": "Int",
+   "label": "Booking Open Days Before"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-06 20:46:12.719850",
+ "modified_by": "Administrator",
+ "module": "Movie Tickets",
+ "name": "Booking Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
