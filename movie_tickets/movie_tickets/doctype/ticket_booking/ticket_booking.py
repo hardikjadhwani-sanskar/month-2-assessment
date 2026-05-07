@@ -84,8 +84,8 @@ class TicketBooking(Document):
 
 	def on_submit(self):
 		#Set booking_status to Confirmed and payment_status to Paid.
-		self.booking_status = "Confirmed"
-		self.payment_status = "Paid"
+		self.db_set("booking_status", "Confirmed")
+		self.db_set("payment_status", "Paid")
 
 		#Update Show: increment booked_seats, decrement available_seats.
 		show_doc = frappe.get_doc("Show", self.show)
@@ -100,7 +100,7 @@ class TicketBooking(Document):
 
 	def on_cancel(self):
 		#Set booking_status to Cancelled.
-		self.booking_status = "Cancelled"
+		self.db_set("booking_status", "Cancelled")
 
 
 		# Calculate refund based on cancellation window: >4 hours before show → 100% refund, 
@@ -126,7 +126,6 @@ class TicketBooking(Document):
 
 			self.refund_amount = 0
 				
-
 		#• Update Show: decrement booked_seats, increment available_seats.
 		#• Set cancellation_time to now_datetime().
 		show_doc.booked_seats -= self.number_of_seats
@@ -138,3 +137,24 @@ class TicketBooking(Document):
 		frappe.db.commit()
 		self.cancellation_time = datetime.datetime.now()
 		self.save()
+
+
+	
+
+@frappe.whitelist()
+def cancel_booking(name, cancellation_reason):
+    doc = frappe.get_doc("Ticket Booking", name)
+
+    if doc.docstatus != 1:
+        frappe.throw(_("Only submitted bookings can be cancelled."))
+
+    if doc.booking_status == "Cancelled":
+        frappe.throw(_("This booking is already cancelled."))
+
+    # Set cancellation_reason before cancel() so on_cancel can access it via self
+    doc.cancellation_reason = cancellation_reason
+
+    # This triggers on_cancel automatically — your hook handles everything else
+    doc.cancel()
+
+    return { "refund": doc.refund_amount }

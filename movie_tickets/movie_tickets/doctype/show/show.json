@@ -46,6 +46,7 @@
    "fetch_from": "movie.title",
    "fieldname": "movie_title",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Movie Title",
    "read_only": 1
   },
@@ -60,12 +61,14 @@
   {
    "fieldname": "show_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Show Date",
    "reqd": 1
   },
   {
    "fieldname": "start_time",
    "fieldtype": "Time",
+   "in_list_view": 1,
    "label": "Start Time",
    "reqd": 1
   },
@@ -85,6 +88,7 @@
   {
    "fieldname": "available_seats",
    "fieldtype": "Int",
+   "in_list_view": 1,
    "label": "Available Seats",
    "read_only": 1
   },
@@ -123,7 +127,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-07 15:41:06.693419",
+ "modified": "2026-05-07 19:40:16.377620",
  "modified_by": "Administrator",
  "module": "Movie Tickets",
  "name": "Show",
