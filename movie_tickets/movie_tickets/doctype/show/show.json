@@ -99,11 +99,11 @@
    "default": "Scheduled",
    "fieldname": "show_status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Show Status",
    "options": "Scheduled\nNow Playing\nCompleted\nCancelled"
   },
   {
-   "fetch_from": "screen.base_price",
    "fieldname": "ticket_price",
    "fieldtype": "Currency",
    "label": "Ticket Price",
@@ -123,7 +123,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-06 19:55:50.839503",
+ "modified": "2026-05-07 15:41:06.693419",
  "modified_by": "Administrator",
  "module": "Movie Tickets",
  "name": "Show",
