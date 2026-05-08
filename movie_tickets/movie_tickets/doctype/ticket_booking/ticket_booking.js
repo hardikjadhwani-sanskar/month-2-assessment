@@ -123,8 +123,7 @@ frappe.ui.form.on("Ticket Booking", {
                                     name:                frm.doc.name,
                                     cancellation_reason: cancellation_reason
                                 },
-                                freeze:         true,
-                                freeze_message: "Cancelling booking...",
+                                
                                 callback(r) {
                                     if (!r.exc) {
                                         const refund = r.message?.refund || 0;
@@ -134,7 +133,7 @@ frappe.ui.form.on("Ticket Booking", {
                                                 : "Booking cancelled. No refund applicable as per policy.",
                                             indicator: "orange"
                                         }, 6);
-                                        frm.reload_doc();
+                                        window.location.reload(); // reload to reflect status change and update seat availability
                                     }
                                 }
                             });

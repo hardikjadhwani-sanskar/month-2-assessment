@@ -99,44 +99,36 @@ class TicketBooking(Document):
 		
 
 	def on_cancel(self):
-		#Set booking_status to Cancelled.
-		self.db_set("booking_status", "Cancelled")
-
-
-		# Calculate refund based on cancellation window: >4 hours before show → 100% refund, 
-		# 2–4 hours → 50% refund, <2 hours → no refund. Set refund_amount and payment_status accordingly
+		# Calculate refund based on cancellation window
 		show_doc = frappe.get_doc("Show", self.show)
-		show_datetime = get_datetime(
-			f"{show_doc.show_date} {show_doc.start_time}"
-		)
-
+		show_datetime = get_datetime(f"{show_doc.show_date} {show_doc.start_time}")
 		time_diff = show_datetime - datetime.datetime.now()
 
 		if time_diff > datetime.timedelta(hours=4):
-
-			self.refund_amount = self.total_amount
-			self.payment_status = "Refunded"
-
+			refund_amount  = self.total_amount
+			payment_status = "Refunded"
 		elif time_diff > datetime.timedelta(hours=2):
-
-			self.refund_amount = self.total_amount * 0.5
-			self.payment_status = "Refunded"
-
+			refund_amount  = self.total_amount * 0.5
+			payment_status = "Refunded"
 		else:
+			refund_amount  = 0
+			payment_status = self.payment_status  # unchanged
 
-			self.refund_amount = 0
-				
-		#• Update Show: decrement booked_seats, increment available_seats.
-		#• Set cancellation_time to now_datetime().
-		show_doc.booked_seats -= self.number_of_seats
-		show_doc.available_seats += self.number_of_seats
+		# Use db_set for all field updates — never self.save() inside on_cancel
+		self.db_set("booking_status",      "Cancelled",                update_modified=False)
+		self.db_set("refund_amount",       refund_amount,              update_modified=False)
+		self.db_set("payment_status",      payment_status,             update_modified=False)
+		self.db_set("cancellation_time",   frappe.utils.now_datetime(), update_modified=False)
+		self.db_set("cancellation_reason", self.cancellation_reason or "", update_modified=False)
+
+		# Update Show counters safely
 		frappe.db.set_value("Show", self.show, {
-			"booked_seats": show_doc.booked_seats,
-			"available_seats": show_doc.available_seats
+			"booked_seats":    max((show_doc.booked_seats    or 0) - (self.number_of_seats or 0), 0),
+			"available_seats": (show_doc.available_seats or 0) + (self.number_of_seats or 0)
 		})
-		frappe.db.commit()
-		self.cancellation_time = datetime.datetime.now()
-		self.save()
+		# No frappe.db.commit() — Frappe handles the transaction automatically
+			
+		
 
 
 	
