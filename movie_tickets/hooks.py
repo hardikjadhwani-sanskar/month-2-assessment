@@ -283,3 +283,22 @@ website_context = {
         {"label": "My Bookings", "url": "/my_bookings"},
     ]
 }
+
+
+
+scheduler_events = {
+    "daily": [
+        "movie_tickets.movie_tickets.tasks.update_movie_status",
+    ],
+    "hourly": [
+        "movie_tickets.movie_tickets.tasks.update_show_status",
+    ],
+    "cron": {
+        "*/5 * * * *": [
+            "movie_tickets.movie_tickets.tasks.auto_expire_unpaid_bookings"
+        ],
+        "0 23 * * *": [
+            "movie_tickets.movie_tickets.tasks.send_daily_revenue_digest"
+        ]
+    }
+}

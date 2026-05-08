@@ -7,6 +7,8 @@ import datetime
 from frappe.utils import getdate
 from frappe.utils.data import get_datetime
 from frappe.permissions import has_permission
+
+
 class TicketBooking(Document):
 	
 
@@ -82,7 +84,18 @@ class TicketBooking(Document):
 
 		return True
 		
-
+	def before_save(self):
+		# decrement available_seats in Show and increment booked_seats in Show even on pending bookings to prevent overbooking in concurrent scenarios.
+		if self.booking_status == "Pending":
+			show_doc = frappe.get_doc("Show", self.show)
+			show_doc.booked_seats += self.number_of_seats
+			show_doc.available_seats -= self.number_of_seats
+			frappe.db.set_value("Show", self.show, {
+				"booked_seats": show_doc.booked_seats,
+				"available_seats": show_doc.available_seats
+			})
+			frappe.db.commit()
+	
 	def on_submit(self):
 		#Set booking_status to Confirmed and payment_status to Paid.
 		self.db_set("booking_status", "Confirmed")
@@ -193,3 +206,6 @@ def get_permission_query_conditions(user):
         """
 
     return "1=0"
+
+
+

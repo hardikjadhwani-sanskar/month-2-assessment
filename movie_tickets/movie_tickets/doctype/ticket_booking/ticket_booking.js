@@ -210,13 +210,13 @@ frappe.ui.form.on("Ticket Booking", {
                         const rows = screenDoc.seat_rows;
                         const cols = screenDoc.seats_per_row;
 
-                        // Step 3: Fetch all submitted, non-cancelled Ticket Bookings for this show
+                        // Step 3: Fetch all submitted, pending non-cancelled Ticket Bookings for this show
                         // Then read their `seats` child table directly from the doc — no get_list on child
                         frappe.db.get_list("Ticket Booking", {
                             filters: [
                                 ["show",           "=",  frm.doc.show],
-                                ["booking_status", "!=", "Cancelled"],
-                                ["docstatus",      "=",  1]
+                                ["booking_status", "not in", ["Cancelled", "Expired"]],
+                               
                             ],
                             fields: ["name"]
                         }).then(bookings => {
