@@ -1,0 +1,206 @@
+{% extends "templates/web.html" %}
+
+{% block title %}My Bookings – CinemaBook{% endblock %}
+
+{% block head_include %}
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cinema-bg: #0a0a0f;
+    --cinema-card: #13131a;
+    --cinema-border: rgba(255,255,255,0.07);
+    --cinema-accent: #e8b84b;
+    --cinema-text: #f0f0f0;
+    --cinema-muted: #7a7a8c;
+  }
+  body { background: var(--cinema-bg) !important; color: var(--cinema-text) !important; font-family: 'DM Sans', sans-serif; }
+
+  .page-header { padding: 48px 0 32px; border-bottom: 1px solid var(--cinema-border); }
+  .page-header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    letter-spacing: 3px; color: var(--cinema-accent); margin: 0;
+  }
+  .page-header p { color: var(--cinema-muted); margin-top: 6px; }
+
+  .bookings-section { padding: 36px 0 60px; }
+
+  /* STATUS BADGES */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-confirmed  { background: rgba(74,222,128,0.12);  color: #4ade80; border: 1px solid rgba(74,222,128,0.25); }
+  .badge-pending    { background: rgba(251,191,36,0.12);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+  .badge-cancelled  { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+  .badge-completed  { background: rgba(148,163,184,0.12); color: #94a3b8; border: 1px solid rgba(148,163,184,0.25); }
+  .badge-paid       { background: rgba(74,222,128,0.12);  color: #4ade80; border: 1px solid rgba(74,222,128,0.25); }
+  .badge-refunded   { background: rgba(127,207,255,0.12); color: #7fcfff; border: 1px solid rgba(127,207,255,0.25); }
+
+  /* DESKTOP TABLE */
+  .bookings-table-wrap {
+    background: var(--cinema-card);
+    border: 1px solid var(--cinema-border);
+    border-radius: 14px; overflow: hidden;
+  }
+  table.bookings-table { width: 100%; border-collapse: collapse; }
+  .bookings-table thead tr {
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--cinema-border);
+  }
+  .bookings-table th {
+    padding: 14px 18px; text-align: left;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--cinema-muted); font-weight: 600;
+  }
+  .bookings-table td {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--cinema-border);
+    vertical-align: middle; font-size: 0.88rem;
+  }
+  .bookings-table tr:last-child td { border-bottom: none; }
+  .bookings-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .booking-id a { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 1px; color: var(--cinema-accent); text-decoration: none; }
+  .booking-id a:hover { text-decoration: underline; }
+  .movie-name { font-weight: 600; color: var(--cinema-text); }
+  .show-info  { color: var(--cinema-muted); font-size: 0.8rem; margin-top: 2px; }
+  .seats      { font-family: monospace; font-size: 0.83rem; color: #b87fff; }
+  .amount     { font-weight: 600; color: var(--cinema-text); }
+
+  /* MOBILE CARDS */
+  .booking-cards { display: none; flex-direction: column; gap: 14px; }
+  .booking-card { background: var(--cinema-card); border: 1px solid var(--cinema-border); border-radius: 12px; padding: 18px; }
+  .bc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .bc-movie { font-weight: 600; font-size: 1rem; color: var(--cinema-text); }
+  .bc-id { font-size: 0.75rem; color: var(--cinema-muted); margin-top: 2px; }
+  .bc-id a { color: var(--cinema-accent); text-decoration: none; }
+  .bc-row { display: flex; justify-content: space-between; font-size: 0.83rem; color: var(--cinema-muted); margin-bottom: 6px; }
+  .bc-row span:last-child { color: var(--cinema-text); }
+
+  @media (max-width: 768px) {
+    .bookings-table-wrap { display: none; }
+    .booking-cards { display: flex; }
+  }
+
+  .empty-state { text-align: center; padding: 80px 0; color: var(--cinema-muted); }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state h3 { color: var(--cinema-text); margin-bottom: 8px; }
+  .cta-btn {
+    display: inline-block; margin-top: 16px;
+    background: var(--cinema-accent); color: #000;
+    padding: 10px 24px; border-radius: 8px;
+    font-weight: 600; text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container">
+
+  <div class="page-header">
+    <h1>My Bookings</h1>
+    <p>{{ bookings|length }} booking{{ 's' if bookings|length != 1 }} found</p>
+  </div>
+
+  <div class="bookings-section">
+    {% if bookings %}
+
+    <!-- DESKTOP TABLE -->
+    <div class="bookings-table-wrap">
+      <table class="bookings-table">
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Movie</th>
+            <th>Show Date & Time</th>
+            <th>Seats</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bookings %}
+          <tr>
+            <td class="booking-id">
+              <a href="/app/ticket-booking/{{ b.name }}">{{ b.name }}</a>
+            </td>
+            <td>
+              <div class="movie-name">{{ b.movie_title }}</div>
+              <div class="show-info">{{ b.theatre_name }}</div>
+            </td>
+            <td>
+              <div>{{ frappe.utils.formatdate(b.show_date, "d MMM yyyy") if b.show_date else "—" }}</div>
+              <div class="show-info">
+                {{ frappe.utils.format_time(b.show_time, "hh:mm a") if b.show_time else "" }}
+              </div>
+            </td>
+            <td class="seats">{{ b.seat_labels }}</td>
+            <td class="amount">₹{{ "{:,.0f}".format(b.total_amount or 0) }}</td>
+            <td>
+              <span class="badge badge-{{ (b.booking_status or '') | lower }}">
+                {{ b.booking_status }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MOBILE CARDS -->
+    <div class="booking-cards">
+      {% for b in bookings %}
+      <div class="booking-card">
+        <div class="bc-top">
+          <div>
+            <div class="bc-movie">{{ b.movie_title }}</div>
+            <div class="bc-id">
+              <a href="/app/ticket-booking/{{ b.name }}">{{ b.name }}</a>
+            </div>
+          </div>
+          <span class="badge badge-{{ (b.booking_status or '') | lower }}">
+            {{ b.booking_status }}
+          </span>
+        </div>
+        <div class="bc-row">
+          <span>Date & Time</span>
+          <span>
+            {{ frappe.utils.formatdate(b.show_date, "d MMM") if b.show_date else "—" }}
+            {% if b.show_time %}· {{ frappe.utils.format_time(b.show_time, "hh:mm a") }}{% endif %}
+          </span>
+        </div>
+        <div class="bc-row">
+          <span>Theatre</span>
+          <span>{{ b.theatre_name }}</span>
+        </div>
+        <div class="bc-row">
+          <span>Seats</span>
+          <span style="color:#b87fff; font-family:monospace">{{ b.seat_labels }}</span>
+        </div>
+        <div class="bc-row">
+          <span>Amount</span>
+          <span style="font-weight:600">₹{{ "{:,.0f}".format(b.total_amount or 0) }}</span>
+        </div>
+        <div class="bc-row">
+          <span>Payment</span>
+          <span>
+            <span class="badge badge-{{ (b.payment_status or '') | lower }}">
+              {{ b.payment_status or "—" }}
+            </span>
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🎟️</div>
+      <h3>No bookings yet</h3>
+      <p>Book your first movie ticket today!</p>
+      <a href="/now_showing" class="cta-btn">Browse Movies</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

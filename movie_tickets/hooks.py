@@ -266,3 +266,20 @@ fixtures = [
         ]
     }
             ]
+
+permission_query_conditions = {
+    "Ticket Booking":
+    "movie_tickets.movie_tickets.doctype.ticket_booking.ticket_booking.get_permission_query_conditions"
+}
+
+has_permission = {
+    "Ticket Booking":
+    "movie_tickets.movie_tickets.doctype.ticket_booking.ticket_booking.has_permission"
+}
+
+website_context = {
+    "top_bar_items": [
+        {"label": "Now Showing", "url": "/now_showing"},
+        {"label": "My Bookings", "url": "/my_bookings"},
+    ]
+}

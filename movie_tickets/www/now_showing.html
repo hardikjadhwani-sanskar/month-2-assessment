@@ -1,0 +1,218 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Now Showing – CinemaBook{% endblock %}
+
+{% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cinema-bg: #0a0a0f;
+    --cinema-card: #13131a;
+    --cinema-border: rgba(255,255,255,0.07);
+    --cinema-accent: #e8b84b;
+    --cinema-text: #f0f0f0;
+    --cinema-muted: #7a7a8c;
+    --radius: 12px;
+  }
+
+  body { background: var(--cinema-bg) !important; color: var(--cinema-text) !important; font-family: 'DM Sans', sans-serif; }
+
+  .cinema-hero {
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 50%, #0a0a0f 100%);
+    padding: 60px 0 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--cinema-border);
+    position: relative;
+    overflow: hidden;
+  }
+  .cinema-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(232,184,75,0.12) 0%, transparent 70%);
+  }
+  .cinema-hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 6vw, 5rem);
+    letter-spacing: 4px;
+    color: var(--cinema-accent);
+    margin: 0; position: relative;
+  }
+  .cinema-hero p { color: var(--cinema-muted); font-size: 1rem; margin-top: 8px; position: relative; }
+
+  .filter-bar {
+    background: var(--cinema-card);
+    border-bottom: 1px solid var(--cinema-border);
+    padding: 16px 0;
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .filter-bar .container { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .filter-label { font-size: 0.75rem; color: var(--cinema-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .filter-select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--cinema-border);
+    color: var(--cinema-text);
+    padding: 8px 14px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .filter-select:focus { outline: none; border-color: var(--cinema-accent); }
+  .filter-btn {
+    background: var(--cinema-accent); color: #000;
+    border: none; padding: 8px 20px; border-radius: 8px;
+    font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .filter-btn:hover { opacity: 0.85; }
+  .clear-btn {
+    background: transparent; color: var(--cinema-muted);
+    border: 1px solid var(--cinema-border);
+    padding: 8px 14px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; font-size: 0.85rem; text-decoration: none;
+  }
+
+  .movies-section { padding: 40px 0 60px; }
+  .section-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .section-meta h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 2px; color: var(--cinema-text); }
+  .result-count { color: var(--cinema-muted); font-size: 0.85rem; }
+
+  .movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 24px;
+  }
+
+  .movie-card {
+    background: var(--cinema-card);
+    border: 1px solid var(--cinema-border);
+    border-radius: var(--radius);
+    overflow: hidden; cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s;
+    animation: fadeUp 0.5s ease both;
+    text-decoration: none !important;
+    display: block;
+  }
+  .movie-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    border-color: rgba(232,184,75,0.3);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .movie-poster {
+    position: relative; aspect-ratio: 2/3; overflow: hidden; background: #1c1c28;
+  }
+  .movie-poster img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+  .movie-card:hover .movie-poster img { transform: scale(1.06); }
+  .poster-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--cinema-muted); }
+
+  .rating-badge {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid var(--cinema-accent);
+    color: var(--cinema-accent);
+    font-size: 0.7rem; font-weight: 800;
+    padding: 3px 8px; border-radius: 6px;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(4px);
+  }
+
+  .movie-info { padding: 14px; }
+  .movie-title { font-weight: 600; font-size: 0.95rem; color: var(--cinema-text); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .movie-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag { font-size: 0.7rem; padding: 3px 8px; border-radius: 20px; background: rgba(255,255,255,0.06); color: var(--cinema-muted); border: 1px solid var(--cinema-border); }
+  .tag.genre { color: #b87fff; border-color: rgba(184,127,255,0.3); background: rgba(184,127,255,0.08); }
+  .tag.lang  { color: #7fcfff; border-color: rgba(127,207,255,0.3); background: rgba(127,207,255,0.08); }
+
+  .movie-footer { display: flex; justify-content: space-between; align-items: center; }
+  .duration { font-size: 0.75rem; color: var(--cinema-muted); }
+  .book-link { font-size: 0.75rem; font-weight: 600; color: var(--cinema-accent); text-decoration: none; }
+
+  .empty-state { text-align: center; padding: 80px 0; color: var(--cinema-muted); }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state h3 { color: var(--cinema-text); margin-bottom: 6px; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="cinema-hero">
+  <h1>Now Showing</h1>
+  <p>{{ movies|length }} film{{ 's' if movies|length != 1 }} currently screening</p>
+</div>
+
+<div class="filter-bar">
+  <div class="container">
+    <span class="filter-label">Filter by</span>
+    <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <select name="genre" class="filter-select">
+        <option value="">All Genres</option>
+        {% for g in genres %}
+          <option value="{{ g.genre }}" {% if selected_genre == g.genre %}selected{% endif %}>{{ g.genre }}</option>
+        {% endfor %}
+      </select>
+      <select name="language" class="filter-select">
+        <option value="">All Languages</option>
+        {% for l in languages %}
+          <option value="{{ l.language }}" {% if selected_language == l.language %}selected{% endif %}>{{ l.language }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="filter-btn">Apply</button>
+      {% if selected_genre or selected_language %}
+        <a href="/now-showing" class="clear-btn">✕ Clear</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="movies-section">
+  <div class="container">
+    <div class="section-meta">
+      <h2>🎬 In Cinemas</h2>
+      <span class="result-count">{{ movies|length }} result{{ 's' if movies|length != 1 }}</span>
+    </div>
+
+    {% if movies %}
+    <div class="movies-grid">
+      {% for movie in movies %}
+      <a class="movie-card" href="/movie_shows?movie={{ movie.name }}">
+        <div class="movie-poster">
+          {% if movie.poster %}
+            <img src="{{ movie.poster }}" alt="{{ movie.title }}" loading="lazy">
+          {% else %}
+            <div class="poster-placeholder">🎥</div>
+          {% endif %}
+          {% if movie.rating %}
+            <div class="rating-badge">{{ movie.rating }}</div>
+          {% endif %}
+        </div>
+        <div class="movie-info">
+          <div class="movie-title">{{ movie.title }}</div>
+          <div class="movie-meta">
+            {% if movie.genre %}    <span class="tag genre">{{ movie.genre }}</span>{% endif %}
+            {% if movie.language %} <span class="tag lang">{{ movie.language }}</span>{% endif %}
+          </div>
+          <div class="movie-footer">
+            <span class="duration">
+              {% if movie.duration_minutes %}{{ movie.duration_minutes }} min{% endif %}
+            </span>
+            <span class="book-link">Book →</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🎭</div>
+      <h3>No movies found</h3>
+      <p>Try adjusting your filters</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

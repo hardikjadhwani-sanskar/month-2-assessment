@@ -1,0 +1,182 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ movie.title }} – Showtimes{% endblock %}
+
+{% block head_include %}
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cinema-bg: #0a0a0f;
+    --cinema-card: #13131a;
+    --cinema-border: rgba(255,255,255,0.07);
+    --cinema-accent: #e8b84b;
+    --cinema-text: #f0f0f0;
+    --cinema-muted: #7a7a8c;
+  }
+  body { background: var(--cinema-bg) !important; color: var(--cinema-text) !important; font-family: 'DM Sans', sans-serif; }
+
+  .movie-hero {
+    display: flex; gap: 36px; align-items: flex-start;
+    padding: 48px 0 40px;
+    border-bottom: 1px solid var(--cinema-border);
+  }
+  .hero-poster {
+    width: 180px; min-width: 180px;
+    aspect-ratio: 2/3; border-radius: 12px; overflow: hidden;
+    background: #1c1c28;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .hero-poster img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-poster-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--cinema-muted); }
+  .hero-info h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    letter-spacing: 2px; color: var(--cinema-accent);
+    margin-bottom: 12px; line-height: 1;
+  }
+  .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .hero-tag {
+    padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--cinema-border); color: var(--cinema-muted);
+  }
+  .hero-tag.highlight { color: var(--cinema-accent); border-color: rgba(232,184,75,0.3); background: rgba(232,184,75,0.08); }
+  .hero-synopsis { color: var(--cinema-muted); font-size: 0.9rem; line-height: 1.6; max-width: 550px; }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--cinema-muted); font-size: 0.85rem;
+    text-decoration: none; margin-bottom: 20px; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--cinema-accent); }
+
+  .shows-section { padding: 40px 0 60px; }
+  .theater-block { margin-bottom: 40px; }
+  .theater-name {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem;
+    letter-spacing: 2px; color: var(--cinema-text);
+    border-left: 3px solid var(--cinema-accent);
+    padding-left: 14px; margin-bottom: 20px;
+  }
+  .date-group { margin-bottom: 22px; }
+  .date-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--cinema-muted); margin-bottom: 12px; }
+  .shows-row { display: flex; flex-wrap: wrap; gap: 14px; }
+
+  .show-card {
+    background: var(--cinema-card);
+    border: 1px solid var(--cinema-border);
+    border-radius: 12px; padding: 16px 20px; min-width: 200px;
+    transition: border-color 0.2s, transform 0.2s;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .show-card:hover { border-color: rgba(232,184,75,0.4); transform: translateY(-3px); }
+
+  .show-time { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; color: var(--cinema-accent); letter-spacing: 1px; }
+  .show-screen { font-size: 0.78rem; color: var(--cinema-muted); margin-top: 2px; }
+  .show-row-info { display: flex; justify-content: space-between; align-items: center; }
+  .show-price { font-weight: 600; font-size: 0.95rem; color: var(--cinema-text); }
+  .seats-avail { font-size: 0.75rem; color: var(--cinema-muted); }
+  .seats-low { color: #ff7a7a; }
+
+  .book-btn {
+    display: block; text-align: center;
+    padding: 9px 0; border-radius: 8px;
+    font-weight: 600; font-size: 0.85rem;
+    background: var(--cinema-accent); color: #000;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: opacity 0.2s; font-family: 'DM Sans', sans-serif;
+  }
+  .book-btn:hover { opacity: 0.85; }
+  .book-btn.login-required {
+    background: transparent;
+    border: 1px solid var(--cinema-accent);
+    color: var(--cinema-accent);
+  }
+
+  .no-shows { text-align: center; padding: 60px 0; color: var(--cinema-muted); }
+
+  @media (max-width: 640px) {
+    .movie-hero { flex-direction: column; gap: 20px; }
+    .hero-poster { width: 130px; min-width: 130px; }
+  }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container">
+
+  <a href="/now_showing" class="back-link">← Back to Now Showing</a>
+
+  <div class="movie-hero">
+    <div class="hero-poster">
+      {% if movie.poster %}
+        <img src="{{ movie.poster }}" alt="{{ movie.title }}">
+      {% else %}
+        <div class="hero-poster-placeholder">🎥</div>
+      {% endif %}
+    </div>
+    <div class="hero-info">
+      <h1>{{ movie.title }}</h1>
+      <div class="hero-tags">
+        {% if movie.genre %}           <span class="hero-tag">{{ movie.genre }}</span>{% endif %}
+        {% if movie.language %}        <span class="hero-tag">{{ movie.language }}</span>{% endif %}
+        {% if movie.duration_minutes %}<span class="hero-tag">{{ movie.duration_minutes }} min</span>{% endif %}
+        {% if movie.rating %}          <span class="hero-tag highlight">{{ movie.rating }}</span>{% endif %}
+      </div>
+      {% if movie.synopsis %}
+        <div class="hero-synopsis">{{ movie.synopsis | striptags | truncate(300) }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="shows-section">
+    <h2 style="font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:2px; margin-bottom:28px; color:var(--cinema-text);">
+      🎟 Select a Show
+    </h2>
+
+    {% if grouped_shows %}
+      {% for theatre_name, dates in grouped_shows.items() %}
+      <div class="theater-block">
+        <div class="theater-name">{{ theatre_name }}</div>
+        {% for date, shows in dates.items() %}
+        <div class="date-group">
+          <div class="date-label">{{ frappe.utils.formatdate(date, "EEEE, d MMMM yyyy") }}</div>
+          <div class="shows-row">
+            {% for show in shows %}
+            <div class="show-card">
+              <div>
+                <div class="show-time">
+                  {{ frappe.utils.format_time(show.start_time, "hh:mm a") }}
+                </div>
+                <div class="show-screen">{{ show.screen_name }}</div>
+              </div>
+              <div class="show-row-info">
+                <span class="show-price">₹{{ "{:,.0f}".format(show.ticket_price or 0) }}</span>
+                <span class="seats-avail {% if show.available_seats and show.available_seats < 10 %}seats-low{% endif %}">
+                  {{ show.available_seats or 0 }} seats left
+                </span>
+              </div>
+              {% if is_guest %}
+                <a href="/login?redirect-to=/movie-shows?movie={{ movie.name }}"
+                   class="book-btn login-required">🔒 Login to Book</a>
+              {% else %}
+                <a href="/app/ticket-booking/new-ticket-booking-1?show={{ show.name }}&movie={{ movie.name }}"
+                   class="book-btn">Book Now</a>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="no-shows">
+        <div style="font-size:3rem; margin-bottom:12px">🎭</div>
+        <h3 style="color:var(--cinema-text)">No upcoming shows</h3>
+        <p>Check back soon for more showtimes</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

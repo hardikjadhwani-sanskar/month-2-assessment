@@ -6,6 +6,7 @@ from frappe.model.document import Document
 import datetime
 from frappe.utils import getdate
 from frappe.utils.data import get_datetime
+from frappe.permissions import has_permission
 class TicketBooking(Document):
 	
 
@@ -150,3 +151,45 @@ def cancel_booking(name, cancellation_reason):
     doc.cancel()
 
     return { "refund": doc.refund_amount }
+
+
+def has_permission(doc, user=None, permission_type=None):
+
+    user = user or frappe.session.user
+
+    # System Manager gets full access
+    if "System Manager" in frappe.get_roles(user):
+        return True
+
+    # Cinema Manager full access
+    if "Cinema Manager" in frappe.get_roles(user):
+        return True
+
+    # Customer can only see own bookings
+    if "Customer" in frappe.get_roles(user):
+
+        return doc.booked_by == user
+
+    return False
+
+def get_permission_query_conditions(user):
+
+    if not user:
+        user = frappe.session.user
+
+    roles = frappe.get_roles(user)
+
+    if (
+        "System Manager" in roles or
+        "Cinema Manager" in roles
+    ):
+        return ""
+
+    if "Customer" in roles:
+
+        return f"""
+            `tabTicket Booking`.booked_by =
+            {frappe.db.escape(user)}
+        """
+
+    return "1=0"
