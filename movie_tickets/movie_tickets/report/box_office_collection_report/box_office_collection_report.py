@@ -1,320 +1,345 @@
+# movie_tickets/movie_tickets/report/box_office_collection_report/box_office_collection_report.py
+
 import frappe
 from frappe import _
 
 
 def execute(filters=None):
+    """
+    Entry point for the Script Report.
+    Returns columns, data, message, chart, and summary.
+    """
     filters = filters or {}
-    columns = get_columns()
-    data    = get_data(filters)
-    chart   = get_chart(data, filters)
-    summary = get_summary(data)
-    return columns, data, None, chart, summary
+
+    columns  = get_columns()
+    data     = get_data(filters)
+    charts   = get_charts(data, filters)
+    summary  = get_summary(data)
+
+    return columns, data, None, charts, summary
 
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # COLUMNS
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+
 def get_columns():
     return [
         {
-            "label":     _("Movie Title"),
             "fieldname": "movie_title",
+            "label":     _("Movie Title"),
             "fieldtype": "Data",
-            "width":     200,
+            "width":     180
         },
         {
-            "label":     _("Genre"),
             "fieldname": "genre",
+            "label":     _("Genre"),
             "fieldtype": "Link",
             "options":   "Movie Genre",
-            "width":     120,
+            "width":     120
         },
         {
-            "label":     _("Language"),
             "fieldname": "language",
+            "label":     _("Language"),
             "fieldtype": "Data",
-            "width":     100,
+            "width":     100
         },
         {
-            "label":     _("Total Shows"),
             "fieldname": "total_shows",
+            "label":     _("Total Shows"),
             "fieldtype": "Int",
-            "width":     110,
+            "width":     110
         },
         {
-            "label":     _("Total Bookings"),
             "fieldname": "total_bookings",
+            "label":     _("Total Bookings"),
             "fieldtype": "Int",
-            "width":     120,
+            "width":     120
         },
         {
-            "label":     _("Total Seats Sold"),
             "fieldname": "total_seats_sold",
+            "label":     _("Total Seats Sold"),
             "fieldtype": "Int",
-            "width":     130,
+            "width":     130
         },
         {
-            "label":     _("Total Revenue"),
             "fieldname": "total_revenue",
+            "label":     _("Total Revenue"),
             "fieldtype": "Currency",
-            "width":     140,
+            "width":     140
         },
         {
+            "fieldname": "avg_occupancy_pct",
             "label":     _("Avg Occupancy (%)"),
-            "fieldname": "avg_occupancy",
             "fieldtype": "Float",
-            "precision": 2,
-            "width":     140,
+            "precision": 1,
+            "width":     140
         },
         {
-            "label":     _("Avg Ticket Price"),
             "fieldname": "avg_ticket_price",
+            "label":     _("Avg Ticket Price"),
             "fieldtype": "Currency",
-            "width":     140,
-        },
+            "width":     140
+        }
     ]
 
 
-# ─────────────────────────────────────────────
-# DATA  (main query)
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# DATA
+# ─────────────────────────────────────────────────────────────────────────────
+
 def get_data(filters):
-    conditions, values = build_conditions(filters)
+    """
+    Main query — JOINs across Movie, Show, Ticket Booking, Booked Seat,
+    and Screen for screen_type (used in chart 2).
+    All filters are parameterized — no string concatenation.
+    """
+    conditions, params = build_conditions(filters)
 
-    # Use a subquery to avoid JOIN multiplication
-    # on total_seats when counting occupancy
-    sql = """
+    rows = frappe.db.sql(f"""
         SELECT
-            m.name                                              AS movie,
-            m.title                                             AS movie_title,
-            m.genre                                             AS genre,
-            m.language                                          AS language,
+            m.title                                         AS movie_title,
+            m.genre                                         AS genre,
+            m.language                                      AS language,
 
-            COUNT(DISTINCT s.name)                              AS total_shows,
-            COUNT(DISTINCT tb.name)                             AS total_bookings,
-            COUNT(bs.name)                                      AS total_seats_sold,
-            COALESCE(SUM(bs.seat_price), 0)                     AS total_revenue,
-
-            ROUND(
-                CASE
-                    WHEN COALESCE(seat_totals.total_capacity, 0) > 0
-                    THEN (COUNT(bs.name) / seat_totals.total_capacity) * 100
-                    ELSE 0
-                END, 2
-            )                                                   AS avg_occupancy,
+            COUNT(DISTINCT s.name)                          AS total_shows,
+            COUNT(DISTINCT tb.name)                         AS total_bookings,
+            COALESCE(SUM(tb.number_of_seats), 0)            AS total_seats_sold,
+            COALESCE(SUM(tb.total_amount), 0)               AS total_revenue,
 
             ROUND(
-                CASE
-                    WHEN COUNT(bs.name) > 0
-                    THEN COALESCE(SUM(bs.seat_price), 0) / COUNT(bs.name)
-                    ELSE 0
-                END, 2
-            )                                                   AS avg_ticket_price
+                AVG(
+                    CASE
+                        WHEN s.total_seats > 0
+                        THEN (s.booked_seats / s.total_seats) * 100
+                        ELSE 0
+                    END
+                ), 1
+            )                                               AS avg_occupancy_pct,
 
-        FROM `tabShow` s
+            CASE
+                WHEN COALESCE(SUM(tb.number_of_seats), 0) > 0
+                THEN ROUND(SUM(tb.total_amount) / SUM(tb.number_of_seats), 2)
+                ELSE 0
+            END                                             AS avg_ticket_price,
 
-        INNER JOIN `tabMovie` m
-            ON m.name = s.movie
+            -- carried for chart 2 grouping (not shown as column)
+            sc.screen_type                                  AS screen_type
 
-        INNER JOIN `tabTicket Booking` tb
-            ON tb.show          = s.name
-            AND tb.docstatus    = 1
-            AND tb.booking_status IN ('Confirmed', 'Pending')
+        FROM
+            `tabMovie`          m
+            INNER JOIN `tabShow`           s  ON s.movie          = m.name
+            INNER JOIN `tabScreen`         sc ON sc.name          = s.screen
+            LEFT  JOIN `tabTicket Booking` tb ON tb.show          = s.name
+                                             AND tb.booking_status NOT IN ('Cancelled', 'Expired')
+                                             AND tb.docstatus      = 1
 
-        INNER JOIN `tabBooked Seat` bs
-            ON bs.parent = tb.name
-
-        -- Subquery: get correct total capacity per movie (avoids multiplication)
-        LEFT JOIN (
-            SELECT
-                s2.movie,
-                SUM(s2.total_seats) AS total_capacity
-            FROM `tabShow` s2
-            WHERE s2.docstatus = 1
-            GROUP BY s2.movie
-        ) AS seat_totals
-            ON seat_totals.movie = m.name
-
-        WHERE s.docstatus = 1
-        {conditions}
+        WHERE
+            {conditions}
 
         GROUP BY
-            m.name,
-            m.title,
-            m.genre,
-            m.language,
-            seat_totals.total_capacity
+            m.title, m.genre, m.language, sc.screen_type
 
-        ORDER BY total_revenue DESC
-    """.format(conditions=conditions)
+        ORDER BY
+            total_revenue DESC
+    """, params, as_dict=True)
 
-    rows = frappe.db.sql(sql, values, as_dict=True)
-
-    for r in rows:
-        r["avg_occupancy"]    = round(float(r.get("avg_occupancy")    or 0), 2)
-        r["avg_ticket_price"] = round(float(r.get("avg_ticket_price") or 0), 2)
-        r["total_revenue"]    = float(r.get("total_revenue") or 0)
-        r["total_seats_sold"] = int(r.get("total_seats_sold") or 0)
-        r["total_bookings"]   = int(r.get("total_bookings")   or 0)
-        r["total_shows"]      = int(r.get("total_shows")      or 0)
-
-    return rows
+    # Collapse screen_type rows into one row per movie
+    # (a movie can show on multiple screen types)
+    return collapse_by_movie(rows)
 
 
-# ─────────────────────────────────────────────
-# FILTER CONDITIONS
-# ─────────────────────────────────────────────
 def build_conditions(filters):
-    conditions = []
-    values     = {}
+    """
+    Builds a parameterized WHERE clause from the filter values.
+    Always includes a base condition so WHERE is never empty.
+    """
+    conditions = ["s.docstatus != 2"]
+    params     = {}
 
-    if filters.get("theatre"):
-        conditions.append("AND s.theatre = %(theatre)s")
-        values["theatre"] = filters["theatre"]
-
-    if filters.get("from_date"):
-        conditions.append("AND s.show_date >= %(from_date)s")
-        values["from_date"] = filters["from_date"]
-
-    if filters.get("to_date"):
-        conditions.append("AND s.show_date <= %(to_date)s")
-        values["to_date"] = filters["to_date"]
+    if filters.get("theater"):
+        conditions.append("s.theatre = %(theater)s")
+        params["theater"] = filters["theater"]
 
     if filters.get("genre"):
-        conditions.append("AND m.genre = %(genre)s")
-        values["genre"] = filters["genre"]
+        conditions.append("m.genre = %(genre)s")
+        params["genre"] = filters["genre"]
 
     if filters.get("language"):
-        conditions.append("AND m.language = %(language)s")
-        values["language"] = filters["language"]
+        conditions.append("m.language = %(language)s")
+        params["language"] = filters["language"]
 
-    return " ".join(conditions), values
+    if filters.get("from_date"):
+        conditions.append("s.show_date >= %(from_date)s")
+        params["from_date"] = filters["from_date"]
+
+    if filters.get("to_date"):
+        conditions.append("s.show_date <= %(to_date)s")
+        params["to_date"] = filters["to_date"]
+
+    return " AND ".join(conditions), params
 
 
-# ─────────────────────────────────────────────
-# CHART — Bar: Top 10 movies by revenue
-# (Frappe reports only support ONE native chart)
-# Pie chart is rendered separately via JS
-# ─────────────────────────────────────────────
-def get_chart(data, filters):
+def collapse_by_movie(rows):
+    """
+    The SQL query groups by movie + screen_type producing multiple rows
+    per movie (one per screen type). This collapses them into one row
+    per movie, summing numeric values across screen types.
+    The screen_type column itself is stripped — it is only used for chart 2.
+    """
+    movie_map = {}
+
+    for row in rows:
+        key = row.movie_title
+
+        if key not in movie_map:
+            movie_map[key] = {
+                "movie_title":      row.movie_title,
+                "genre":            row.genre,
+                "language":         row.language,
+                "total_shows":      row.total_shows      or 0,
+                "total_bookings":   row.total_bookings   or 0,
+                "total_seats_sold": row.total_seats_sold or 0,
+                "total_revenue":    row.total_revenue    or 0,
+                "avg_occupancy_pct": row.avg_occupancy_pct or 0,
+                "avg_ticket_price": row.avg_ticket_price or 0,
+                # keep screen_type rows for chart 2
+                "_screen_type_revenues": {
+                    row.screen_type: float(row.total_revenue or 0)
+                }
+            }
+        else:
+            # Sum across screen types for the same movie
+            existing = movie_map[key]
+            existing["total_shows"]       += row.total_shows      or 0
+            existing["total_bookings"]    += row.total_bookings   or 0
+            existing["total_seats_sold"]  += row.total_seats_sold or 0
+            existing["total_revenue"]     += row.total_revenue    or 0
+
+            # Avg occupancy — simple average of averages (approximation)
+            existing["avg_occupancy_pct"] = round(
+                (existing["avg_occupancy_pct"] + (row.avg_occupancy_pct or 0)) / 2, 1
+            )
+
+            # Recalculate avg ticket price from totals
+            if existing["total_seats_sold"] > 0:
+                existing["avg_ticket_price"] = round(
+                    existing["total_revenue"] / existing["total_seats_sold"], 2
+                )
+
+            st = row.screen_type or "Standard"
+            existing["_screen_type_revenues"][st] = (
+                existing["_screen_type_revenues"].get(st, 0)
+                + float(row.total_revenue or 0)
+            )
+
+    return list(movie_map.values())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHARTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_charts(data, filters):
+    """
+    Returns a list of two chart definitions:
+    Chart 1 — Bar: Top 10 movies by revenue
+    Chart 2 — Pie: Revenue by screen type
+    """
     if not data:
         return None
 
-    top10      = sorted(data, key=lambda r: r["total_revenue"], reverse=True)[:10]
-    bar_labels = [r["movie_title"] for r in top10]
-    bar_values = [r["total_revenue"] for r in top10]
+    # ── Chart 1: Top 10 movies by revenue (Bar) ───────────────────────────────
+    top10 = sorted(data, key=lambda r: r["total_revenue"], reverse=True)[:10]
 
-    return {
+    bar_chart = {
         "data": {
-            "labels":   bar_labels,
+            "labels":   [r["movie_title"] for r in top10],
             "datasets": [
                 {
-                    "name":   "Total Revenue (₹)",
-                    "values": bar_values,
+                    "name":   "Revenue (₹)",
+                    "values": [round(r["total_revenue"], 2) for r in top10],
+                    "chartType": "bar"
                 }
-            ],
+            ]
         },
-        "type":        "bar",
-        "colors":      ["#e8b84b"],
-        "title":       "Top 10 Movies by Revenue",
-        "axisOptions": {"xIsSeries": 1},
-        "barOptions":  {"stacked": 0},
+        "type":   "bar",
+        "title":  "Top 10 Movies by Revenue",
+        "colors": ["#1f77b4"],
+        "axisOptions": {
+            "xIsSeries": 1
+        },
+        "barOptions": {
+            "stacked": 0
+        }
     }
 
+    # ── Chart 2: Revenue by screen type (Pie) ────────────────────────────────
+    screen_type_totals = {}
+    for row in data:
+        for stype, rev in row.get("_screen_type_revenues", {}).items():
+            label = stype or "Standard"
+            screen_type_totals[label] = screen_type_totals.get(label, 0) + rev
 
-# ─────────────────────────────────────────────
-# PIE CHART DATA — Revenue by screen type
-# Called by JS via whitelisted method
-# ─────────────────────────────────────────────
-def get_pie_chart_data(filters):
-    conditions, values = build_conditions(filters)
+    pie_chart = {
+        "data": {
+            "labels":   list(screen_type_totals.keys()),
+            "datasets": [
+                {
+                    "name":   "Revenue by Screen Type",
+                    "values": [round(v, 2) for v in screen_type_totals.values()]
+                }
+            ]
+        },
+        "type":   "pie",
+        "title":  "Revenue by Screen Type",
+        "colors": ["#2ca02c", "#ff7f0e", "#9467bd", "#d62728"]
+    }
 
-    sql = """
-        SELECT
-            COALESCE(NULLIF(sc.screen_type, ''), 'Standard') AS screen_type,
-            COALESCE(SUM(bs.seat_price), 0)                  AS revenue
-
-        FROM `tabShow` s
-
-        INNER JOIN `tabScreen` sc
-            ON sc.name = s.screen
-
-        INNER JOIN `tabMovie` m
-            ON m.name = s.movie
-
-        INNER JOIN `tabTicket Booking` tb
-            ON tb.show             = s.name
-            AND tb.docstatus       = 1
-            AND tb.booking_status  IN ('Confirmed', 'Pending')
-
-        INNER JOIN `tabBooked Seat` bs
-            ON bs.parent = tb.name
-
-        WHERE s.docstatus = 1
-        {conditions}
-
-        GROUP BY sc.screen_type
-        ORDER BY revenue DESC
-    """.format(conditions=conditions)
-
-    return frappe.db.sql(sql, values, as_dict=True)
+    return [bar_chart, pie_chart]
 
 
-# ─────────────────────────────────────────────
-# SUMMARY CARDS
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# SUMMARY ROW (shown at bottom of report)
+# ─────────────────────────────────────────────────────────────────────────────
+
 def get_summary(data):
+    """
+    Returns summary KPI cards shown above the report table.
+    """
     if not data:
         return []
 
     total_revenue    = sum(r["total_revenue"]    for r in data)
-    total_seats_sold = sum(r["total_seats_sold"] for r in data)
     total_bookings   = sum(r["total_bookings"]   for r in data)
-    total_shows      = sum(r["total_shows"]      for r in data)
+    total_seats_sold = sum(r["total_seats_sold"] for r in data)
     avg_occupancy    = round(
-        sum(r["avg_occupancy"] for r in data) / len(data), 2
-    )
+        sum(r["avg_occupancy_pct"] for r in data) / len(data), 1
+    ) if data else 0
 
     return [
         {
-            "label":    _("Total Revenue"),
-            "value":    total_revenue,
-            "datatype": "Currency",
-            "currency": frappe.defaults.get_global_default("currency") or "INR",
-            "color":    "green",
+            "value":       total_revenue,
+            "label":       _("Total Revenue"),
+            "datatype":    "Currency",
+            "indicator":   "green"
         },
         {
-            "label":    _("Total Seats Sold"),
-            "value":    total_seats_sold,
-            "datatype": "Int",
-            "color":    "blue",
+            "value":       total_bookings,
+            "label":       _("Total Bookings"),
+            "datatype":    "Int",
+            "indicator":   "blue"
         },
         {
-            "label":    _("Total Bookings"),
-            "value":    total_bookings,
-            "datatype": "Int",
-            "color":    "blue",
+            "value":       total_seats_sold,
+            "label":       _("Total Seats Sold"),
+            "datatype":    "Int",
+            "indicator":   "blue"
         },
         {
-            "label":    _("Total Shows"),
-            "value":    total_shows,
-            "datatype": "Int",
-            "color":    "orange",
-        },
-        {
-            "label":    _("Avg Occupancy (%)"),
-            "value":    avg_occupancy,
-            "datatype": "Float",
-            "color":    "orange",
-        },
+            "value":       avg_occupancy,
+            "label":       _("Avg Occupancy (%)"),
+            "datatype":    "Float",
+            "indicator":   "orange"
+        }
     ]
-
-
-# ─────────────────────────────────────────────
-# WHITELISTED — called by JS for pie chart
-# ─────────────────────────────────────────────
-@frappe.whitelist()
-def get_pie_chart_ajax(filters=None):
-    import json
-    f = json.loads(filters) if isinstance(filters, str) else (filters or {})
-    return get_pie_chart_data(f)

@@ -44,7 +44,7 @@ frappe.ui.form.on("Ticket Booking", {
             if (!frm.custom_buttons["Send Booking Confirmation"]) {
                 frm.add_custom_button("Send Booking Confirmation", () => {
                     frappe.call({
-                        method: "movie_tickets.movie_tickets.doctype.ticket_booking.ticket_booking.send_booking_confirmation",
+                        method: "movie_tickets.movie_tickets.api.send_booking_confirmation",
                         args: {
                             booking_id: frm.doc.name
                         },

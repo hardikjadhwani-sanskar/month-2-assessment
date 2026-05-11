@@ -1,0 +1,136 @@
+/* ── Booking Status Badges ───────────────────────────────────────────── */
+
+.booking-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.badge-pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.badge-confirmed {
+    background: #d1e7dd;
+    color: #0a3622;
+    border: 1px solid #198754;
+}
+
+.badge-cancelled {
+    background: #f8d7da;
+    color: #58151c;
+    border: 1px solid #dc3545;
+}
+
+.badge-expired {
+    background: #e2e3e5;
+    color: #41464b;
+    border: 1px solid #adb5bd;
+}
+
+/* ── Houseful Pulsing Indicator ──────────────────────────────────────── */
+
+.houseful-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #dc3545;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.houseful-indicator::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    border-radius: 50%;
+    animation: houseful-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes houseful-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.4;
+        transform: scale(0.7);
+    }
+}
+
+/* ── Seat Availability Color Coding ─────────────────────────────────── */
+
+.seat {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    color: #fff;
+    user-select: none;
+}
+
+.seat:hover:not(.seat-booked) {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.seat-available {
+    background: #4CAF50;
+}
+
+.seat-selected {
+    background: #FFD700;
+    color: #333;
+    box-shadow: 0 0 0 2px #e6c200;
+}
+
+.seat-booked {
+    background: #ff4d4d;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.seat-disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ── Availability Progress Bar ───────────────────────────────────────── */
+
+.seat-availability-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: #e9ecef;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.seat-availability-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.fill-high   { background: #4CAF50; }   /* > 50% available  */
+.fill-medium { background: #ffc107; }   /* 20–50% available */
+.fill-low    { background: #dc3545; }   /* < 20% available  */

@@ -1,4 +1,3 @@
-# movie_tickets/tasks.py
 
 import frappe
 import datetime
@@ -6,8 +5,8 @@ from frappe.utils import today, now_datetime, getdate, get_datetime, nowtime
 
 #import booking_expiry_minutes from booking_configuration doctype
 def get_booking_expiry_minutes():
-	config = frappe.get_single("Booking Configuration")
-	return config.booking_expiry_minutes or 15  # default to 15 if not set
+    config = frappe.get_single("Booking Configuration")
+    return config.booking_expiry_minutes or 15  # default to 15 if not set
 
 def auto_expire_unpaid_bookings():
     """
@@ -86,7 +85,6 @@ def update_movie_status():
     movies = frappe.db.sql("""
         SELECT name, release_date, end_date, movie_status
         FROM `tabMovie`
-        WHERE docstatus != 2
     """, as_dict=True)
 
     if not movies:
@@ -138,7 +136,7 @@ def update_show_status():
         FROM `tabShow`
         WHERE
             show_status NOT IN ('Cancelled', 'Completed')
-            AND docstatus != 2
+           
     """, as_dict=True)
 
     if not shows:
