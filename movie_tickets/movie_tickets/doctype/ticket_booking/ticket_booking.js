@@ -46,7 +46,8 @@ frappe.ui.form.on("Ticket Booking", {
                     frappe.call({
                         method: "movie_tickets.movie_tickets.api.send_booking_confirmation",
                         args: {
-                            booking_id: frm.doc.name
+                            booking_name: frm.doc.name
+
                         },
                         callback: (r) => {
                             if (r.message) {
