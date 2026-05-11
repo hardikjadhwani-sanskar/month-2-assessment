@@ -155,7 +155,7 @@ frappe.ui.form.on("Ticket Booking", {
         
         //• Add a custom button "Select Seats" that opens a dialog showing a visual seat grid (rows x cols from screen). 
     // Booked seats shown as disabled/red, available as green/clickable. On confirm, populate the Booked Seat child table.
-        if (!frm.custom_buttons["Select Seats"]) {
+        if (!frm.custom_buttons["Select Seats"] && frm.doc.docstatus === 0 && frm.is_new()) {
             frm.add_custom_button("Select Seats", () => {
                 if (!frm.doc.show) {
                     frappe.msgprint({ message: "Please select a show first.", title: "Error", indicator: "red" });

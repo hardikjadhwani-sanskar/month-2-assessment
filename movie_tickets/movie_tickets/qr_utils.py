@@ -10,8 +10,10 @@ from frappe.utils import get_site_path
 
 def generate_booking_qr(booking_name):
     """
-    Generates a QR code image for a booking, saves it as a File
-    attachment on the Ticket Booking record, and returns the file URL.
+    Generates a QR code PNG for a booking.
+    Saves it to the public files directory directly (not via File doc content field)
+    so the path is predictable and base64 encoding in email works reliably.
+    Returns the file URL e.g. /files/qr_BKG-2026-00001.png
     """
     doc = frappe.get_doc("Ticket Booking", booking_name)
 
@@ -40,44 +42,63 @@ def generate_booking_qr(booking_name):
     qr.add_data(qr_content)
     qr.make(fit=True)
 
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
 
-    # Save to a BytesIO buffer
+    # ── Save PNG bytes to buffer ──────────────────────────────────────────────
     buffer = io.BytesIO()
-    img = img.convert("RGB")
     img.save(buffer, format="PNG")
-    buffer.seek(0)
+    image_bytes = buffer.getvalue()   # getvalue() works without seek — safer than read()
 
-    # Save as a Frappe File attached to the booking
-    filename = f"qr_{booking_name.replace('/', '-')}.png"
+    # ── Write file directly to site's public/files directory ─────────────────
+    # This makes the path 100% predictable for base64 reading later
+    safe_name = booking_name.replace("/", "-").replace(" ", "_")
+    filename  = f"qr_{safe_name}.png"
 
-    # Remove old QR file if it exists
+    # Absolute path: /home/user/bench/sites/your-site/public/files/qr_BKG-....png
+    file_dir  = get_site_path("public", "files")
+    file_path = os.path.join(file_dir, filename)
+
+    os.makedirs(file_dir, exist_ok=True)
+
+    with open(file_path, "wb") as f:
+        f.write(image_bytes)
+
+    # ── Register as Frappe File record so it appears in attachments ──────────
+    file_url = f"/files/{filename}"
+
+    # Remove old File record if exists (avoid duplicates in attachment list)
     old_file = frappe.db.get_value(
         "File",
-        {"attached_to_doctype": "Ticket Booking",
-         "attached_to_name": booking_name,
-         "file_name": filename},
+        {
+            "attached_to_doctype": "Ticket Booking",
+            "attached_to_name":    booking_name,
+            "file_name":           filename
+        },
         "name"
     )
     if old_file:
         frappe.delete_doc("File", old_file, ignore_permissions=True)
 
-    # Save new file
+    # Create new File record pointing to the already-saved file
     file_doc = frappe.get_doc({
-        "doctype":            "File",
-        "file_name":          filename,
+        "doctype":             "File",
+        "file_name":           filename,
+        "file_url":            file_url,       # explicit URL — no content upload needed
         "attached_to_doctype": "Ticket Booking",
-        "attached_to_name":   booking_name,
-        "content":            buffer.read(),
-        "is_private":         0
+        "attached_to_name":    booking_name,
+        "is_private":          0               # public so email can read it
     })
-    file_doc.save(ignore_permissions=True)
+    file_doc.insert(ignore_permissions=True)
 
-    # Store the URL on the booking record
+    # ── Store URL on booking record ───────────────────────────────────────────
     frappe.db.set_value(
         "Ticket Booking", booking_name,
-        "qr_code_url", file_doc.file_url,
+        "qr_code_url", file_url,
         update_modified=False
     )
 
-    return file_doc.file_url
+    frappe.logger().info(
+        f"[QR] Generated for {booking_name} → {file_path}"
+    )
+
+    return file_url
