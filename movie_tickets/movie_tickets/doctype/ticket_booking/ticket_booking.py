@@ -167,12 +167,16 @@ class TicketBooking(Document):
         """
         if not self.customer_email:
             return
-
+        
+        # Generate QR code first — URL needed in email
+        from movie_tickets.movie_tickets.qr_utils import generate_booking_qr
+        qr_url = generate_booking_qr(self.name)
+    
         # Reuse the existing whitelisted API
         from movie_tickets.movie_tickets.api import (
             send_booking_confirmation,
         )
-        send_booking_confirmation(self.name)
+        send_booking_confirmation(self.name, qr_url=qr_url)
 
         frappe.logger().info(
             f"[on_submit] Confirmation email sent to {self.customer_email} for {self.name}"
@@ -241,6 +245,9 @@ def has_permission(doc, user=None, permission_type=None):
     # Cinema Manager full access
     if "Cinema Manager" in frappe.get_roles(user):
         return True
+    
+    if "Box Office Staff" in frappe.get_roles(user):
+        return True
 
     # Customer can only see own bookings
     if "Customer" in frappe.get_roles(user):
@@ -258,7 +265,8 @@ def get_permission_query_conditions(user):
 
     if (
         "System Manager" in roles or
-        "Cinema Manager" in roles
+        "Cinema Manager" in roles or
+        "Box Office Staff" in roles
     ):
         return ""
 

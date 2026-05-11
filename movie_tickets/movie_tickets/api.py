@@ -1,12 +1,14 @@
 
+import os
+
 import frappe
 import datetime
 import json
 from frappe import _
 from frappe.utils import now_datetime, get_datetime, flt, cint
 from frappe.model.document import Document
-
-
+from frappe.utils import get_site_path
+import base64
 # ─────────────────────────────────────────────────────────────────────────────
 # A) GET SEAT AVAILABILITY
 # ─────────────────────────────────────────────────────────────────────────────
@@ -264,89 +266,122 @@ def get_shows_for_movie(movie, city=None, date=None):
 # API URL:
 # /api/method/movie_tickets.movie_tickets.api.send_booking_confirmation
 @frappe.whitelist()
-def send_booking_confirmation(booking_name):
-    """
-    Sends a formatted HTML email to the customer with full booking details.
-    """
+def send_booking_confirmation(booking_name, qr_url=None):
     doc = frappe.get_doc("Ticket Booking", booking_name)
 
     if not doc.customer_email:
         frappe.throw(_("Customer email is missing on booking {0}.").format(booking_name))
 
+    # Use stored QR URL if not passed directly
+    if not qr_url:
+        qr_url = doc.qr_code_url
+
     seat_labels = ", ".join([s.seat_label for s in (doc.seats or [])])
-    show_doc    = frappe.get_doc("Show", doc.show)
+
+    # Convert QR image to Base64
+    qr_base64 = ""
+
+    if qr_url:
+
+        file_path = get_site_path(
+            "public",
+            qr_url.lstrip("/")
+        )
+
+        if os.path.exists(file_path):
+
+            with open(file_path, "rb") as f:
+
+                qr_base64 = (
+                    base64.b64encode(
+                        f.read()
+                    ).decode()
+                )
+
+    # Inline image HTML
+    qr_img_tag = (
+        f"""
+        <img
+            src="data:image/png;base64,{qr_base64}"
+            width="160"
+            height="160"
+            alt="Booking QR Code"
+            style="display:block;margin:0 auto;"
+        />
+        """
+        if qr_base64
+        else
+        """
+        <p style='color:#999;font-size:12px;'>
+            QR code not available
+        </p>
+        """
+    )
+
+    # # Build absolute URL for QR image
+    # site_url   = frappe.utils.get_url()
+    # qr_img_tag = (
+    #     f'<img src="{site_url}{qr_url}" width="160" height="160" '
+    #     f'alt="Booking QR Code" style="display:block;margin:0 auto;"/>'
+    #     if qr_url else
+    #     "<p style='color:#999;font-size:12px;'>QR code not available</p>"
+    # )
 
     html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">
-
-        <!-- Header -->
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;
+                border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">
         <div style="background:#1a1a2e;padding:24px 32px;">
-            <h1 style="color:#ffffff;margin:0;font-size:22px;">🎬 Booking Confirmed!</h1>
-            <p style="color:#a0a0c0;margin:6px 0 0;">Your tickets are booked. Enjoy the show!</p>
+            <h1 style="color:#fff;margin:0;font-size:22px;">🎬 Booking Confirmed!</h1>
+            <p style="color:#a0a0c0;margin:6px 0 0;">Your tickets are ready.</p>
         </div>
-
-        <!-- Booking ID Banner -->
         <div style="background:#f0f4ff;padding:14px 32px;border-bottom:1px solid #dce3f5;">
             <p style="margin:0;font-size:13px;color:#555;">Booking ID</p>
-            <p style="margin:4px 0 0;font-size:20px;font-weight:bold;color:#1a1a2e;letter-spacing:1px;">{doc.name}</p>
+            <p style="margin:4px 0 0;font-size:20px;font-weight:bold;
+                      color:#1a1a2e;letter-spacing:1px;">{doc.name}</p>
         </div>
-
-        <!-- Details -->
         <div style="padding:24px 32px;">
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
-                <tr>
-                    <td style="padding:10px 0;color:#777;width:40%;border-bottom:1px solid #f0f0f0;">Movie</td>
-                    <td style="padding:10px 0;font-weight:600;color:#1a1a2e;border-bottom:1px solid #f0f0f0;">{doc.movie_title}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 0;color:#777;border-bottom:1px solid #f0f0f0;">Theatre</td>
-                    <td style="padding:10px 0;font-weight:600;color:#1a1a2e;border-bottom:1px solid #f0f0f0;">{doc.theatre}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 0;color:#777;border-bottom:1px solid #f0f0f0;">Screen</td>
-                    <td style="padding:10px 0;font-weight:600;color:#1a1a2e;border-bottom:1px solid #f0f0f0;">{doc.screen}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 0;color:#777;border-bottom:1px solid #f0f0f0;">Show Date</td>
-                    <td style="padding:10px 0;font-weight:600;color:#1a1a2e;border-bottom:1px solid #f0f0f0;">{frappe.format(doc.show_date, {"fieldtype": "Date"})}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 0;color:#777;border-bottom:1px solid #f0f0f0;">Show Time</td>
-                    <td style="padding:10px 0;font-weight:600;color:#1a1a2e;border-bottom:1px solid #f0f0f0;">{str(doc.start_time)[:5] if doc.start_time else "N/A"}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 0;color:#777;border-bottom:1px solid #f0f0f0;">Seats</td>
-                    <td style="padding:10px 0;font-weight:600;color:#1a1a2e;border-bottom:1px solid #f0f0f0;">{seat_labels or "N/A"}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 0;color:#777;border-bottom:1px solid #f0f0f0;">No. of Seats</td>
-                    <td style="padding:10px 0;font-weight:600;color:#1a1a2e;border-bottom:1px solid #f0f0f0;">{doc.number_of_seats}</td>
-                </tr>
-                <tr>
-                    <td style="padding:10px 0;color:#777;">Total Amount</td>
-                    <td style="padding:10px 0;font-size:16px;font-weight:bold;color:#2d7a2d;">
-                        ₹{flt(doc.total_amount):,.2f}
-                    </td>
-                </tr>
+                <tr><td style="padding:8px 0;color:#777;width:40%;
+                    border-bottom:1px solid #f0f0f0;">Movie</td>
+                    <td style="padding:8px 0;font-weight:600;color:#1a1a2e;
+                    border-bottom:1px solid #f0f0f0;">{doc.movie_title}</td></tr>
+                <tr><td style="padding:8px 0;color:#777;
+                    border-bottom:1px solid #f0f0f0;">Theatre</td>
+                    <td style="padding:8px 0;font-weight:600;color:#1a1a2e;
+                    border-bottom:1px solid #f0f0f0;">{doc.theatre}</td></tr>
+                <tr><td style="padding:8px 0;color:#777;
+                    border-bottom:1px solid #f0f0f0;">Screen</td>
+                    <td style="padding:8px 0;font-weight:600;color:#1a1a2e;
+                    border-bottom:1px solid #f0f0f0;">{doc.screen}</td></tr>
+                <tr><td style="padding:8px 0;color:#777;
+                    border-bottom:1px solid #f0f0f0;">Date & Time</td>
+                    <td style="padding:8px 0;font-weight:600;color:#1a1a2e;
+                    border-bottom:1px solid #f0f0f0;">
+                    {frappe.format(doc.show_date, {"fieldtype":"Date"})}
+                    at {str(doc.start_time)[:5]}</td></tr>
+                <tr><td style="padding:8px 0;color:#777;
+                    border-bottom:1px solid #f0f0f0;">Seats</td>
+                    <td style="padding:8px 0;font-weight:600;color:#1a1a2e;
+                    border-bottom:1px solid #f0f0f0;">{seat_labels}</td></tr>
+                <tr><td style="padding:8px 0;color:#777;">Amount</td>
+                    <td style="padding:8px 0;font-size:16px;font-weight:bold;
+                    color:#2d7a2d;">₹{doc.total_amount:,.2f}</td></tr>
             </table>
         </div>
-
-        <!-- Notice -->
-        <div style="background:#fff8e1;padding:14px 32px;border-top:1px solid #ffe082;">
-            <p style="margin:0;font-size:13px;color:#7a5c00;">
-                ⏰ <strong>Please arrive 15 minutes before the show.</strong>
-                Carry a valid photo ID. This email serves as your booking confirmation.
+        <!-- QR Code Section -->
+        <div style="padding:20px 32px;text-align:center;
+                    border-top:1px solid #e0e0e0;background:#fafafa;">
+            <p style="margin:0 0 12px;font-size:13px;color:#555;font-weight:600;">
+                Show this QR code at the entrance
             </p>
+            {qr_img_tag}
         </div>
-
-        <!-- Footer -->
-        <div style="background:#f5f5f5;padding:16px 32px;text-align:center;">
+        <div style="background:#f5f5f5;padding:16px 32px;text-align:center;
+                    border-top:1px solid #e0e0e0;">
             <p style="margin:0;font-size:12px;color:#999;">
-                For support, reply to this email or contact the theatre directly.<br>
-                © {datetime.date.today().year} Movie Tickets. All rights reserved.
+                © {frappe.utils.now_datetime().year} Movie Tickets
             </p>
         </div>
-
     </div>
     """
 
@@ -357,11 +392,7 @@ def send_booking_confirmation(booking_name):
         now=True
     )
 
-    return {
-        "success": True,
-        "message": f"Confirmation email sent to {doc.customer_email}"
-    }
-
+    return {"success": True, "message": f"Confirmation sent to {doc.customer_email}"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # E) GET REVENUE SUMMARY

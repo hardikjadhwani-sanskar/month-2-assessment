@@ -1,0 +1,26 @@
+{
+ "content": null,
+ "creation": "2026-05-11 16:00:15.942237",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-05-11 16:00:15.942237",
+ "modified_by": "Administrator",
+ "module": "Movie Tickets",
+ "name": "cinema-dashboard",
+ "owner": "Administrator",
+ "page_name": "cinema-dashboard",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Cinema Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Cinema Dashboard"
+}

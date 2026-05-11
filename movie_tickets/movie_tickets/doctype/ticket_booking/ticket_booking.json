@@ -28,7 +28,8 @@
   "booking_time",
   "cancellation_time",
   "refund_amount",
-  "cancellation_reason"
+  "cancellation_reason",
+  "qr_code_url"
  ],
  "fields": [
   {
@@ -186,13 +187,19 @@
    "fieldname": "cancellation_reason",
    "fieldtype": "Small Text",
    "label": "Cancellation Reason"
+  },
+  {
+   "fieldname": "qr_code_url",
+   "fieldtype": "Data",
+   "label": "QR Code URL",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-06 20:38:18.387643",
+ "modified": "2026-05-11 14:31:19.587809",
  "modified_by": "Administrator",
  "module": "Movie Tickets",
  "name": "Ticket Booking",
